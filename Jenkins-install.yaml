@@ -3,37 +3,46 @@
   become: yes
   remote_user: ec2-user
   become_user: root
+  vars: 
+    java : "openjdk-11-jdk"
+    jenkins:
+      repo_URL:  "https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key"
+    
+
   tasks:
-  - name: Download Long Term Jenkins release
-    get_url:
-      url: https://pkg.jenkins.io/redhat-stable/jenkins.repo
-      dest: /etc/yum.repos.d/jenkins.repo
-
-  - name: Import jenkins key from url
-    ansible.builtin.rpm_key:
+  - name: Download Jenkins repo apt URL for apt key
+    apt_key:
+      url: "{{ jenkins.repo_URL }}"
       state: present
-      key: https://pkg.jenkins.io/redhat-stable/jenkins.io.key
+    become: yes 
 
-  - name: yum update
-    yum:
-      name: '*'
+  - name: Ensure the repository is configured
+    apt_repository: 
+      repo : "deb https://pkg.jenkins.io/debian-stable binary/"
+      state: present
+    become : yes
+
+  - name: Update apt cache
+    apt:
+      update_cache: yes
       state: latest
 
   - name: Install java
-    yum:
-      name: java-11-openjdk-devel
+    apt:
+      name: "{{ java }}"
       state: present
 
   - name: Install jenkins
-    yum:
+    apt:
       name: jenkins
       state: latest
 
-  - name: daemon-reload to pick up config changes
-    ansible.builtin.systemd:
-      daemon_reload: yes
-
-  - name: Start jenkins
-    ansible.builtin.systemd:
+  - name: Start jenkins service
+    service:
       name: jenkins
+      enabled: true
       state: started
+
+  
+  
+ 
